@@ -4,6 +4,10 @@ import { supabase } from '../services/supabaseClient';
 
 interface SidebarProps {
   user: User | null;
+  workspaces: any[] | null;
+  activeWorkspaceId: string | null;
+  onSwitchWorkspace: (id: string) => void;
+  onCreateWorkspace: () => void;
   onShowHome: () => void;
   onShowFiles: () => void;
   onShowCandidateProfile: () => void;
@@ -17,6 +21,10 @@ type ThemeMode = 'system' | 'light' | 'dark';
 
 export const Sidebar: React.FC<SidebarProps> = ({
   user,
+  workspaces,
+  activeWorkspaceId,
+  onSwitchWorkspace,
+  onCreateWorkspace,
   onShowHome,
   onShowFiles,
   onShowCandidateProfile,
@@ -27,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [theme, setTheme] = useState<ThemeMode>('system');
   const [showMenu, setShowMenu] = useState(false);
+  const [showWorkspaces, setShowWorkspaces] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -216,6 +225,50 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {showMenu && (
           <div className="absolute bottom-full left-4 right-4 mb-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <button
+              onClick={onCreateWorkspace}
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[18px]">add_circle</span>
+              Create Workspace
+            </button>
+
+            <div
+              className="relative"
+              onMouseEnter={() => setShowWorkspaces(true)}
+              onMouseLeave={() => setShowWorkspaces(false)}
+            >
+              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">switch_account</span>
+                  Switch Workspace
+                </div>
+                <span className="material-symbols-outlined text-[16px] text-gray-400">chevron_right</span>
+              </button>
+
+              {showWorkspaces && workspaces && (
+                <div className="absolute left-full bottom-0 ml-1 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 animate-in fade-in slide-in-from-left-2 duration-200 z-[60]">
+                  {workspaces.map((workspace) => (
+                    <button
+                      key={workspace.id}
+                      onClick={() => {
+                        onSwitchWorkspace(workspace.id);
+                        setShowMenu(false);
+                        setShowWorkspaces(false);
+                      }}
+                      className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 ${workspace.id === activeWorkspaceId ? 'text-rose-600 font-medium' : 'text-gray-700 dark:text-gray-300'
+                        }`}
+                    >
+                      <span className="truncate">{workspace.name}</span>
+                      {workspace.id === activeWorkspaceId && (
+                        <span className="material-symbols-outlined text-[16px]">check</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">person</span>
               Profile

@@ -29,6 +29,7 @@ const App: React.FC = () => {
   const [renamingProject, setRenamingProject] = useState<{ index: number; name: string } | null>(null);
 
   const [workspaces, setWorkspaces] = useState<any[] | null>(null);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -60,6 +61,9 @@ const App: React.FC = () => {
       const { workspaceService } = await import('./services/workspaceService');
       const data = await workspaceService.getUserWorkspaces(userId);
       setWorkspaces(data);
+      if (data.length > 0 && !activeWorkspaceId) {
+        setActiveWorkspaceId(data[0].id);
+      }
     } catch (error) {
       console.error('Error checking workspaces:', error);
       // Fallback or handle error - for now assume no workspace if error to force retry or show error
@@ -161,12 +165,16 @@ const App: React.FC = () => {
     return <OnboardingWizard user={session.user} onComplete={handleOnboardingComplete} />;
   }
 
-  const activeWorkspace = workspaces && workspaces.length > 0 ? workspaces[0] : null;
+  const activeWorkspace = workspaces?.find(w => w.id === activeWorkspaceId) || (workspaces && workspaces.length > 0 ? workspaces[0] : null);
 
   return (
     <div className="flex h-screen w-full flex-row bg-white dark:bg-background-dark">
       <Sidebar
         user={session.user}
+        workspaces={workspaces}
+        activeWorkspaceId={activeWorkspaceId}
+        onSwitchWorkspace={setActiveWorkspaceId}
+        onCreateWorkspace={() => setView('home')} // For now, or trigger actual flow
         onShowHome={() => setView('home')}
         onShowFiles={() => setView('files')}
         onShowCandidateProfile={() => setView('candidate-profile')}

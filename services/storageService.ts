@@ -55,6 +55,109 @@ export const storageService = {
         }
     },
 
+    async moveToTrash(bucket: string, workspaceId: string, filePath: string) {
+        const fileName = filePath.split('/').pop();
+        const deletedAt = new Date().toISOString();
+        const trashId = `${Date.now()}_${fileName}`;
+        const trashPath = `trash/${workspaceId}/${trashId}`;
+
+        // Get file metadata before moving
+        const { data: fileInfo, error: statError } = await supabase.storage
+            .from(bucket)
+            .list(filePath.substring(0, filePath.lastIndexOf('/')), {
+                search: fileName
+            });
+
+        if (statError) throw statError;
+        const item = fileInfo?.find(f => f.name === fileName);
+
+        // Move in storage
+        const { error: moveError } = await supabase.storage
+            .from(bucket)
+            .move(filePath, trashPath);
+
+        if (moveError) throw moveError;
+
+        // Track in DB
+        const { error: dbError } = await supabase
+            .from('trash_files')
+            .insert({
+                workspace_id: workspaceId,
+                original_path: filePath,
+                file_name: fileName,
+                file_size: item?.metadata?.size || 0,
+                content_type: item?.metadata?.mimetype,
+                trash_path: trashPath,
+                deleted_at: deletedAt,
+                expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+            });
+
+        if (dbError) {
+            console.error('Error tracking trash in DB:', dbError);
+            // Even if DB fails, the file is in trash folder now
+        }
+    },
+
+    async restoreFromTrash(bucket: string, trashItemId: string) {
+        // Get info from DB
+        const { data: trashItem, error: fetchError } = await supabase
+            .from('trash_files')
+            .select('*')
+            .eq('id', trashItemId)
+            .single();
+
+        if (fetchError || !trashItem) throw fetchError || new Error('Trash item not found');
+
+        // Move back in storage
+        const { error: moveError } = await supabase.storage
+            .from(bucket)
+            .move(trashItem.trash_path, trashItem.original_path);
+
+        if (moveError) throw moveError;
+
+        // Remove from DB
+        await supabase.from('trash_files').delete().eq('id', trashItemId);
+    },
+
+    async listTrash(workspaceId: string) {
+        const { data, error } = await supabase
+            .from('trash_files')
+            .select('*')
+            .eq('workspace_id', workspaceId)
+            .order('deleted_at', { ascending: false });
+
+        if (error) throw error;
+        return data.map(item => ({
+            ...item,
+            id: item.id,
+            name: item.file_name,
+            path: item.trash_path,
+            size: item.file_size,
+            type: item.content_type,
+            updated_at: item.deleted_at
+        }));
+    },
+    async permanentlyDelete(bucket: string, trashItemId: string) {
+        // Get info from DB
+        const { data: trashItem, error: fetchError } = await supabase
+            .from('trash_files')
+            .select('*')
+            .eq('id', trashItemId)
+            .single();
+
+        if (fetchError || !trashItem) throw fetchError || new Error('Trash item not found');
+
+        // Delete from storage
+        const { error: storageError } = await supabase.storage
+            .from(bucket)
+            .remove([trashItem.trash_path]);
+
+        if (storageError) throw storageError;
+
+        // Remove from DB
+        await supabase.from('trash_files').delete().eq('id', trashItemId);
+    },
+
     async moveFile(bucket: string, fromPath: string, toPath: string) {
         const { error } = await supabase.storage
             .from(bucket)

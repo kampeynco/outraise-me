@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Loader2, Upload, Trash2, File as FileIcon, Download, AlertCircle,
-  Folder, Plus, HardDrive, Search, X
+  Folder, Plus, HardDrive, Search, X, Trash, RefreshCcw, RotateCcw
 } from 'lucide-react';
 import { storageService } from '../services/storageService';
 import { DndContext, useDraggable, useDroppable, DragEndEvent } from '@dnd-kit/core';
@@ -23,7 +23,14 @@ interface FilesScreenProps {
 }
 
 // Draggable File Row Component
-const FileRow = ({ file, selected, onSelect, onDelete }: { file: FileItem, selected: boolean, onSelect: (path: string) => void, onDelete: () => void }) => {
+const FileRow = ({ file, selected, onSelect, onDelete, onRestore, view }: {
+  file: FileItem,
+  selected: boolean,
+  onSelect: (path: string) => void,
+  onDelete: () => void,
+  onRestore?: () => void,
+  view: 'drive' | 'trash'
+}) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: file.path,
     data: { file }
@@ -62,23 +69,44 @@ const FileRow = ({ file, selected, onSelect, onDelete }: { file: FileItem, selec
       <td className="p-4 align-middle text-text-sub text-sm">{(file.size / 1024).toFixed(1)} KB</td>
       <td className="p-4 align-middle text-right" onPointerDown={(e) => e.stopPropagation()}>
         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <a
-            href={file.url}
-            download={file.name}
-            target="_blank"
-            rel="noreferrer"
-            className="p-2 hover:bg-white rounded-md transition-colors shadow-subtle border border-sidebar-border"
-            title="Download"
-          >
-            <Download className="h-4 w-4 text-text-sub" />
-          </a>
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="p-2 hover:bg-red-50 rounded-md transition-colors text-red-500 border border-red-100 shadow-subtle"
-            title="Delete"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          {view === 'trash' ? (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onRestore?.(); }}
+                className="p-2 hover:bg-green-50 rounded-md transition-colors text-green-600 border border-green-100 shadow-subtle"
+                title="Restore"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                className="p-2 hover:bg-red-50 rounded-md transition-colors text-red-500 border border-red-100 shadow-subtle"
+                title="Delete Permanently"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </>
+          ) : (
+            <>
+              <a
+                href={file.url}
+                download={file.name}
+                target="_blank"
+                rel="noreferrer"
+                className="p-2 hover:bg-white rounded-md transition-colors shadow-subtle border border-sidebar-border"
+                title="Download"
+              >
+                <Download className="h-4 w-4 text-text-sub" />
+              </a>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                className="p-2 hover:bg-red-50 rounded-md transition-colors text-red-500 border border-red-100 shadow-subtle"
+                title="Move to Trash"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </>
+          )}
         </div>
       </td>
     </tr>
@@ -139,6 +167,7 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [view, setView] = useState<'drive' | 'trash'>('drive');
 
 
   const loadData = useCallback(async () => {
@@ -146,21 +175,27 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
     setLoading(true);
     setError(null);
     try {
-      const folderList = await storageService.listFolders('workspace-files', workspaceId);
-      setFolders(folderList);
+      if (view === 'trash') {
+        const trashList = await storageService.listTrash(workspaceId);
+        setFiles(trashList);
+        setFolders([]); // No folders in trash for now
+      } else {
+        const folderList = await storageService.listFolders('workspace-files', workspaceId);
+        setFolders(folderList);
 
-      const path = currentFolder ? `${workspaceId}/${currentFolder}` : workspaceId;
-      const recursive = currentFolder === null;
+        const path = currentFolder ? `${workspaceId}/${currentFolder}` : workspaceId;
+        const recursive = currentFolder === null;
 
-      const fileList = await storageService.listFiles('workspace-files', path, recursive);
-      setFiles(fileList);
+        const fileList = await storageService.listFiles('workspace-files', path, recursive);
+        setFiles(fileList);
+      }
     } catch (err: any) {
       console.error('Failed to load data:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [workspaceId, currentFolder]);
+  }, [workspaceId, currentFolder, view]);
 
   useEffect(() => {
     if (success) {
@@ -260,11 +295,17 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
     }
   };
 
-  const handleDelete = async (path: string) => {
+  const handleDelete = async (path: string, id?: string) => {
     try {
-      await storageService.deleteFile('workspace-files', path);
-      setSuccess('File deleted');
-      setFiles(prev => prev.filter(f => f.path !== path));
+      if (view === 'trash' && id) {
+        if (!confirm('Permanently delete this file? This cannot be undone.')) return;
+        await storageService.permanentlyDelete('workspace-files', id);
+        setSuccess('File permanently deleted');
+      } else {
+        await storageService.moveToTrash('workspace-files', workspaceId, path);
+        setSuccess('File moved to trash');
+      }
+      await loadData();
       setSelectedFiles(prev => {
         const next = new Set(prev);
         next.delete(path);
@@ -275,16 +316,53 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
     }
   };
 
+  const handleRestore = async (id: string) => {
+    try {
+      setLoading(true);
+      await storageService.restoreFromTrash('workspace-files', id);
+      setSuccess('File restored successfully');
+      await loadData();
+    } catch (err: any) {
+      setError(`Failed to restore file: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleBulkDelete = async () => {
     if (selectedFiles.size === 0) return;
-    if (!confirm(`Delete ${selectedFiles.size} files?`)) return;
-    try {
-      await storageService.deleteFile('workspace-files', Array.from(selectedFiles));
-      setSuccess(`${selectedFiles.size} files deleted`);
-      await loadData();
-      setSelectedFiles(new Set());
-    } catch (err: any) {
-      setError(err.message);
+
+    if (view === 'trash') {
+      if (!confirm(`Permanently delete ${selectedFiles.size} files? This cannot be undone.`)) return;
+      try {
+        setLoading(true);
+        const selectedList = files.filter(f => selectedFiles.has(f.path));
+        for (const file of selectedList) {
+          await storageService.permanentlyDelete('workspace-files', file.id);
+        }
+        setSuccess(`${selectedFiles.size} files permanently deleted`);
+        await loadData();
+        setSelectedFiles(new Set());
+      } catch (err: any) {
+        setError(`Failed to delete some files: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      if (!confirm(`Move ${selectedFiles.size} files to trash?`)) return;
+      try {
+        setLoading(true);
+        for (const path of selectedFiles) {
+          await storageService.moveToTrash('workspace-files', workspaceId, path);
+        }
+        setSuccess(`${selectedFiles.size} files moved to trash`);
+        await loadData();
+        setSelectedFiles(new Set());
+      } catch (err: any) {
+        setError(`Failed to move some files to trash: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -318,9 +396,9 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
         {/* Header */}
         <header className="border-b border-sidebar-border px-8 py-5 flex items-center justify-between bg-white shrink-0 shadow-sm z-10">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-serif text-text-main">Workspace Files</h1>
+            <h1 className="text-2xl font-serif text-text-main">{view === 'trash' ? 'Trash Bin' : 'Workspace Files'}</h1>
             <span className="bg-accent-bg text-text-sub px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
-              {currentFolder ? currentFolder : 'Drive'}
+              {view === 'trash' ? 'Items' : currentFolder ? currentFolder : 'Drive'}
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -331,24 +409,26 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
                 className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors border border-red-100 shadow-subtle"
               >
                 <Trash2 size={16} />
-                Delete ({selectedFiles.size})
+                {view === 'trash' ? 'Delete Permanently' : 'Move to Trash'} ({selectedFiles.size})
               </button>
             )}
-            <div className="relative">
-              <input
-                type="file"
-                id="file-upload"
-                className="hidden"
-                onChange={handleUpload}
-                disabled={uploading}
-              />
-              <label htmlFor="file-upload" className="cursor-pointer">
-                <div className={`flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-hover transition-all shadow-card ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                  {uploading ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
-                  <span>Upload File</span>
-                </div>
-              </label>
-            </div>
+            {view === 'drive' && (
+              <div className="relative">
+                <input
+                  type="file"
+                  id="file-upload"
+                  className="hidden"
+                  onChange={handleUpload}
+                  disabled={uploading}
+                />
+                <label htmlFor="file-upload" className="cursor-pointer">
+                  <div className={`flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-hover transition-all shadow-card ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    {uploading ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
+                    <span>Upload File</span>
+                  </div>
+                </label>
+              </div>
+            )}
           </div>
         </header>
 
@@ -390,7 +470,7 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
                   path="ROOT"
                   isActive={currentFolder === null}
                   isMain={true}
-                  onClick={() => setCurrentFolder(null)}
+                  onClick={() => { setView('drive'); setCurrentFolder(null); }}
                 />
               </div>
 
@@ -435,6 +515,19 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
                   </button>
                 )}
               </div>
+
+              <div className="pt-4 mt-4 border-t border-sidebar-border/50">
+                <button
+                  onClick={() => { setView('trash'); setCurrentFolder(null); }}
+                  className={`
+                    flex items-center gap-3 w-full p-2.5 rounded-xl transition-all duration-200
+                    ${view === 'trash' ? 'bg-red-50 text-red-600 shadow-sm border border-red-100' : 'text-text-sub hover:bg-accent-bg hover:text-red-500'}
+                  `}
+                >
+                  <Trash size={18} className={view === 'trash' ? 'text-red-600' : 'text-text-sub/50 group-hover:text-red-500'} />
+                  <span className="text-sm font-semibold">Trash Bin</span>
+                </button>
+              </div>
             </div>
           </aside>
 
@@ -446,7 +539,7 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
                 <div className="relative w-72 group">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-sub group-focus-within:text-primary transition-colors" />
                   <input
-                    placeholder="Search in drive..."
+                    placeholder={view === 'trash' ? "Search in trash..." : "Search in drive..."}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-sidebar-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all shadow-subtle"
@@ -514,7 +607,9 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
                           file={file}
                           selected={selectedFiles.has(file.path)}
                           onSelect={toggleSelect}
-                          onDelete={() => handleDelete(file.path)}
+                          onDelete={() => handleDelete(file.path, file.id)}
+                          onRestore={() => handleRestore(file.id)}
+                          view={view}
                         />
                       ))
                     )}

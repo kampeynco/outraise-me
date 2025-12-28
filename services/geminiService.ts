@@ -1,25 +1,23 @@
-import { GoogleGenAI } from "@google/genai";
+import { supabase } from "./supabaseClient";
 
-// Initialize the API client
-// Note: In a production environment, API keys should be handled securely on a backend.
-// For this client-side demo, we assume the environment variable is available.
-const apiKey = process.env.API_KEY || ''; 
-const ai = new GoogleGenAI({ apiKey });
-
+/**
+ * Generates a response from the Gemini AI model.
+ * Now routed through a Supabase Edge Function for improved security.
+ */
 export const generateResponse = async (prompt: string): Promise<string> => {
-  if (!apiKey) {
-    return "API Key is missing. Please check your environment configuration.";
-  }
-
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
+    const { data, error } = await supabase.functions.invoke('gemini', {
+      body: { prompt }
     });
-    
-    return response.text || "No response generated.";
+
+    if (error) {
+      console.error("Error calling Gemini Edge Function:", error);
+      return `Error: ${error.message}`;
+    }
+
+    return data?.text || "No response generated.";
   } catch (error) {
-    console.error("Error generating content:", error);
+    console.error("Exception calling Gemini Edge Function:", error);
     throw error;
   }
 };

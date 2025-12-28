@@ -130,10 +130,21 @@ export const storageService = {
             if (item.id === null) {
                 // It is a folder
                 folders.push(item.name);
-                // Recursively find subfolders if needed, but for now flat list of top level or specific level
-                // For the sidebar, we might want just top-level folders within the workspace
             }
         }
         return folders;
+    },
+
+    async deleteFolder(bucket: string, folderPath: string) {
+        // In Supabase, deleting a "folder" requires deleting all its contents
+        const files = await this.listFiles(bucket, folderPath, true);
+        const pathsToDelete = files.map(f => f.path);
+
+        // Also need to delete the .keep file if it exists
+        pathsToDelete.push(`${folderPath}/.keep`);
+
+        if (pathsToDelete.length > 0) {
+            await this.deleteFile(bucket, pathsToDelete);
+        }
     }
 };

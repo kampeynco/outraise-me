@@ -58,6 +58,7 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [lastError, setLastError] = useState<string | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
 
   const loadFiles = useCallback(async () => {
     if (!workspaceId) {

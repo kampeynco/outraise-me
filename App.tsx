@@ -21,7 +21,7 @@ const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  const [view, setView] = useState<'home' | 'chats' | 'files' | 'candidate-profile' | 'drafts' | 'guardrails' | 'projects'>('home');
+  const [view, setView] = useState<'home' | 'chats' | 'files' | 'candidate-profile' | 'drafts' | 'guardrails' | 'projects' | 'create-workspace'>('home');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
@@ -161,8 +161,21 @@ const App: React.FC = () => {
     return <Auth />;
   }
 
-  if (workspaces !== null && workspaces.length === 0) {
-    return <OnboardingWizard user={session.user} onComplete={handleOnboardingComplete} />;
+  if (workspaces !== null && (workspaces.length === 0 || view === 'create-workspace')) {
+    return (
+      <div className="relative">
+        {view === 'create-workspace' && (
+          <button
+            onClick={() => setView('home')}
+            className="absolute top-6 left-6 flex items-center gap-2 px-4 py-2 rounded-lg text-text-sub dark:text-gray-400 hover:text-text-main dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors z-50"
+          >
+            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+            Back to Dashboard
+          </button>
+        )}
+        <OnboardingWizard user={session.user} onComplete={handleOnboardingComplete} />
+      </div>
+    );
   }
 
   const activeWorkspace = workspaces?.find(w => w.id === activeWorkspaceId) || (workspaces && workspaces.length > 0 ? workspaces[0] : null);
@@ -173,8 +186,11 @@ const App: React.FC = () => {
         user={session.user}
         workspaces={workspaces}
         activeWorkspaceId={activeWorkspaceId}
-        onSwitchWorkspace={setActiveWorkspaceId}
-        onCreateWorkspace={() => setView('home')} // For now, or trigger actual flow
+        onSwitchWorkspace={(id) => {
+          setActiveWorkspaceId(id);
+          setView('home');
+        }}
+        onCreateWorkspace={() => setView('create-workspace')}
         onShowHome={() => setView('home')}
         onShowFiles={() => setView('files')}
         onShowCandidateProfile={() => setView('candidate-profile')}
@@ -187,7 +203,7 @@ const App: React.FC = () => {
         <header className="h-16 border-b border-border-light dark:border-gray-800 flex items-center justify-between px-6 bg-white dark:bg-background-dark shrink-0 z-10 transition-colors duration-300">
           <div className="flex items-center gap-2 text-sm text-text-main dark:text-white font-medium">
             <span className="material-symbols-outlined text-[18px] text-gray-400">work</span>
-            <span>{activeWorkspace?.name || 'Loading workspace...'}</span>
+            <span>{activeWorkspace?.name || (workspaces === null ? 'Loading workspace...' : 'No workspace selected')}</span>
           </div>
           <div className="flex items-center gap-4">
             {/* Redundant Sign Out and Ellipsis removed as requested */}
@@ -230,6 +246,9 @@ const App: React.FC = () => {
             onRenameProject={handleRenameProject}
             onDeleteProject={handleDeleteProject}
           />
+        )}
+        {view === 'create-workspace' && (
+          <OnboardingWizard user={session.user} onComplete={handleOnboardingComplete} />
         )}
       </main>
 

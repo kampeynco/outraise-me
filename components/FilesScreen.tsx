@@ -59,7 +59,10 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const loadFiles = useCallback(async () => {
-    if (!workspaceId) return;
+    if (!workspaceId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const data = await storageService.listFiles('workspace-files', workspaceId);
@@ -69,18 +72,26 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
       }));
     } catch (error) {
       console.error('Error loading files:', error);
+      // alert('Error loading files: ' + (error as any).message); // Optional: verbose
     } finally {
       setLoading(false);
     }
   }, [workspaceId]);
 
   useEffect(() => {
+    console.log('FilesScreen mounted with workspaceId:', workspaceId);
     loadFiles();
-  }, [loadFiles]);
+  }, [loadFiles, workspaceId]);
 
   const handleUpload = async (event: any) => {
     const acceptedFiles = event.acceptedFiles as File[];
-    if (!workspaceId || acceptedFiles.length === 0) return;
+
+    if (!workspaceId) {
+      alert("Error: No active workspace found. Please select a workspace.");
+      return;
+    }
+
+    if (acceptedFiles.length === 0) return;
 
     setUploading(true);
     try {
@@ -88,6 +99,7 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
         await storageService.uploadFile('workspace-files', workspaceId, file);
       }
       await loadFiles();
+      alert("Upload successful!");
     } catch (error: any) {
       console.error('Error uploading files:', error);
       alert(`Failed to upload files: ${error.message || 'Unknown error'}`);

@@ -90,7 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <img
               src="/assets/kaios_inverse_icon.png"
               alt="Logo"
-              className="w-48 h-48 max-w-none object-contain absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100"
+              className="w-64 h-64 max-w-none object-contain absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100"
             />
           </div>
           <h1 className="text-text-main dark:text-white text-xl font-bold tracking-wide font-serif">

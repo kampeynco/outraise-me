@@ -58,7 +58,6 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [lastError, setLastError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<any>({});
 
 
   const loadFiles = useCallback(async () => {
@@ -69,9 +68,7 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
     setLoading(true);
     setLastError(null);
     try {
-      console.log(`Listing files for bucket workspace-files folder ${workspaceId}`);
       const data = await storageService.listFiles('workspace-files', workspaceId);
-      setDebugInfo((prev: any) => ({ ...prev, listResultLength: data.length, lastListTime: new Date().toISOString() }));
 
       // Sort by creation date descending
       setFiles(data.sort((a, b) => {
@@ -80,7 +77,6 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
     } catch (error: any) {
       console.error('Error loading files:', error);
       setLastError(`Load Error: ${error.message}`);
-      setDebugInfo((prev: any) => ({ ...prev, listError: error.message }));
     } finally {
       setLoading(false);
     }
@@ -109,13 +105,10 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
     setLastError(null);
     try {
       for (const file of acceptedFiles) {
-        alert(`Uploading File:\nName: ${file.name}\nSize: ${file.size}\nType: ${file.type}`);
-        const result = await storageService.uploadFile('workspace-files', workspaceId, file);
-        alert(`Upload Result Path: ${result.path}`);
-        setDebugInfo(prev => ({ ...prev, lastUploadPath: result.path, lastUploadId: result.id }));
+        await storageService.uploadFile('workspace-files', workspaceId, file);
       }
       await loadFiles();
-      alert("Upload successful! File should appear now.");
+      alert("Upload successful!");
     } catch (error: any) {
       console.error('Error uploading files:', error);
       const msg = `Failed to upload: ${error.message || 'Unknown error'}`;
@@ -301,23 +294,7 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
           <FileUpload.HiddenInput />
         </FileUpload.Root>
       </div>
-      <div className="fixed bottom-4 right-4 bg-red-600 text-white p-6 rounded-xl z-50 shadow-2xl text-sm font-mono max-w-sm overflow-auto">
-        <h4 className="font-bold border-b border-white/20 mb-2 pb-1 text-lg">⚠️ DEBUG MODE</h4>
-        <div>Workspace ID: {workspaceId || 'NULL'}</div>
-        <div>ID Length: {workspaceId?.length || 0}</div>
-        <div>Loading: {loading ? 'YES' : 'NO'}</div>
-        <div>Uploading: {uploading ? 'YES' : 'NO'}</div>
-        <div>Files Count: {files.length}</div>
-        <div className="mt-2 pt-2 border-t border-white/20 text-xs">
-          <div>Last Upload: {debugInfo.lastUploadPath || '-'}</div>
-          <div>List Result: {debugInfo.listResultLength ?? '-'}</div>
-          <div>List Time: {debugInfo.lastListTime ? new Date(debugInfo.lastListTime).toLocaleTimeString() : '-'}</div>
-          <div className="mt-2 text-[10px] break-all">
-            Env URL: {import.meta.env.VITE_SUPABASE_URL || 'MISSING'}
-          </div>
-        </div>
-        {lastError && <div className="bg-white text-red-600 p-2 mt-2 rounded font-bold">Error: {lastError}</div>}
-      </div>
     </div>
+    </div >
   );
 };

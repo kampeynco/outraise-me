@@ -10,12 +10,7 @@ export const storageService = {
             .from(bucket)
             .upload(filePath, file);
 
-        if (error) {
-            console.error('Upload error:', error);
-            throw error;
-        }
-
-        console.log('Upload successful. Data:', data);
+        if (error) throw error;
 
         const { data: { publicUrl } } = supabase.storage
             .from(bucket)
@@ -51,7 +46,7 @@ export const storageService = {
                 sortBy: { column: 'created_at', order: 'desc' },
             });
 
-        console.log(`List files for ${workspaceId} result:`, data, error);
+
 
         if (error) throw error;
 

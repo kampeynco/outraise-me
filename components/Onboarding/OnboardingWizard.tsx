@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { Loader2, Plus, Mail, ArrowRight, Check } from 'lucide-react';
-import { workspaceService } from '../services/workspaceService';
+import { workspaceService } from '../../services/workspaceService';
 
 interface OnboardingWizardProps {
     user: User;

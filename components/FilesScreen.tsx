@@ -522,14 +522,6 @@ export const FilesScreen: React.FC<FilesScreenProps> = ({ workspaceId }) => {
                 </table>
               </div>
             </div>
-
-            <div className="mt-4 flex items-center justify-between text-[10px] font-bold text-text-sub uppercase tracking-widest px-2">
-              <div>{currentFolder ? `Viewing Folder: ${currentFolder}` : 'Recursive Workspace View'}</div>
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                Connected to Supabase Storage
-              </div>
-            </div>
           </main>
         </div>
       </div>

@@ -1,5 +1,16 @@
+import React, { useState, useEffect, useRef } from 'react';
 import { guardrailService } from '../services/guardrailService';
-import { Loader2 } from 'lucide-react';
+import {
+  Loader2,
+  CheckCircle,
+  Ban,
+  Palette,
+  Plus,
+  AlertTriangle,
+  ShieldAlert,
+  Save,
+  X
+} from 'lucide-react';
 
 type Tab = 'forbidden' | 'tone' | 'approved';
 

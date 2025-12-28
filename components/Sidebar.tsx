@@ -81,16 +81,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside className="flex w-[260px] flex-col h-full border-r border-sidebar-border bg-sidebar-light dark:bg-background-dark dark:border-gray-800 transition-colors duration-300 shrink-0 z-20">
       <div className="h-16 px-5 border-b border-sidebar-border dark:border-gray-800 flex items-center shrink-0">
         <div className="flex items-center gap-3 w-full">
-          <div className="group relative w-14 h-14 flex items-center justify-center rounded-lg bg-black dark:bg-transparent hover:bg-black dark:hover:bg-black transition-all duration-300 cursor-pointer overflow-hidden shadow-sm shrink-0">
+          <div className="group relative w-7 h-7 flex items-center justify-center rounded-lg bg-black dark:bg-transparent hover:bg-black dark:hover:bg-black transition-all duration-300 cursor-pointer overflow-visible shadow-sm shrink-0">
             <img
               src="/assets/kaios_logo_icon.png"
               alt="Logo"
-              className="w-12 h-12 object-contain absolute inset-0 m-auto transition-all duration-300 opacity-100 group-hover:opacity-0 scale-100 group-hover:scale-75"
+              className="w-24 h-24 object-contain absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 opacity-100 group-hover:opacity-0 scale-100 group-hover:scale-75"
             />
             <img
               src="/assets/kaios_inverse_icon.png"
               alt="Logo"
-              className="w-12 h-12 object-contain absolute inset-0 m-auto transition-all duration-300 opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100"
+              className="w-24 h-24 object-contain absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100"
             />
           </div>
           <h1 className="text-text-main dark:text-white text-xl font-bold tracking-wide font-serif">

@@ -12,6 +12,8 @@ import { TransactionsScreen } from './components/TransactionsScreen';
 import { FormsScreen } from './components/FormsScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { NotificationsScreen } from './components/NotificationsScreen';
+import { FormEditorScreen } from './components/Forms/FormEditorScreen';
+import { FormsScreen } from './components/FormsScreen';
 import { generateResponse } from './services/geminiService';
 import { ChatMessage } from './types';
 import { supabase } from './services/supabaseClient';
@@ -24,13 +26,14 @@ const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  const [view, setView] = useState<'home' | 'chats' | 'files' | 'candidate-profile' | 'drafts' | 'guardrails' | 'projects' | 'create-workspace' | 'donations' | 'transactions' | 'forms' | 'settings' | 'notifications'>('home');
+  const [view, setView] = useState<'home' | 'chats' | 'files' | 'candidate-profile' | 'drafts' | 'guardrails' | 'projects' | 'create-workspace' | 'donations' | 'transactions' | 'forms' | 'form-editor' | 'settings' | 'notifications'>('home');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const [workspaces, setWorkspaces] = useState<any[] | null>(null);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [editingFormId, setEditingFormId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -261,7 +264,13 @@ const App: React.FC = () => {
           <TransactionsScreen />
         )}
         {view === 'forms' && (
-          <FormsScreen />
+          <FormsScreen onEdit={(id) => {
+            setEditingFormId(id);
+            setView('form-editor');
+          }} />
+        )}
+        {view === 'form-editor' && editingFormId && (
+          <FormEditorScreen formId={editingFormId} onBack={() => setView('forms')} />
         )}
         {view === 'settings' && (
           <SettingsScreen />

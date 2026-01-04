@@ -1,11 +1,80 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../services/supabaseClient';
+import { Loader2 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
-export const NotificationsScreen: React.FC = () => {
-    const notifications = [
-        { id: 1, title: 'New Donation', message: 'Sarah Jenkins donated $50.00', time: '2 mins ago', read: false },
-        { id: 2, title: 'Goal Reached', message: 'Campaign "End of Year Drive" hit 50% of goal', time: '1 hour ago', read: false },
-        { id: 3, title: 'New Form Active', message: 'Gala Tickets form is now live', time: '1 day ago', read: true },
-    ];
+interface Notification {
+    id: string;
+    title: string;
+    message: string;
+    created_at: string;
+    read: boolean;
+    type: string;
+}
+
+interface NotificationsScreenProps {
+    onRefresh?: () => void;
+}
+
+export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ onRefresh }) => {
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchNotifications = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const { data, error } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching notifications:', error);
+        } else {
+            setNotifications(data || []);
+        }
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        fetchNotifications();
+    }, []);
+
+    const markAllAsRead = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        await supabase
+            .from('notifications')
+            .update({ read: true })
+            .eq('user_id', session.user.id)
+            .eq('read', false);
+
+        // Optimistic update
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        if (onRefresh) onRefresh();
+    };
+
+    const markAsRead = async (id: string) => {
+        await supabase
+            .from('notifications')
+            .update({ read: true })
+            .eq('id', id);
+
+        // Optimistic update
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+        if (onRefresh) onRefresh();
+    };
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-full">
+                <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+            </div>
+        );
+    }
 
     return (
         <div className="p-8 max-w-7xl mx-auto w-full">
@@ -14,9 +83,14 @@ export const NotificationsScreen: React.FC = () => {
                     <h1 className="text-2xl font-serif text-gray-900 dark:text-white mb-2">Notifications</h1>
                     <p className="text-gray-500 dark:text-gray-400">Stay updated on your fundraising activity.</p>
                 </div>
-                <button className="px-4 py-2 text-sm font-medium text-accent hover:text-accent-hover dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
-                    Mark all as read
-                </button>
+                {notifications.some(n => !n.read) && (
+                    <button
+                        onClick={markAllAsRead}
+                        className="px-4 py-2 text-sm font-medium text-accent hover:text-accent-hover dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                    >
+                        Mark all as read
+                    </button>
+                )}
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
@@ -25,7 +99,8 @@ export const NotificationsScreen: React.FC = () => {
                         {notifications.map((notification) => (
                             <div
                                 key={notification.id}
-                                className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex gap-4 ${!notification.read ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
+                                onClick={() => !notification.read && markAsRead(notification.id)}
+                                className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex gap-4 ${!notification.read ? 'bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer' : ''}`}
                             >
                                 <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${!notification.read ? 'bg-accent dark:bg-blue-400' : 'bg-transparent'}`} />
                                 <div className="flex-1">
@@ -36,7 +111,7 @@ export const NotificationsScreen: React.FC = () => {
                                         {notification.message}
                                     </p>
                                     <span className="text-xs text-gray-400 mt-1 block">
-                                        {notification.time}
+                                        {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                                     </span>
                                 </div>
                             </div>

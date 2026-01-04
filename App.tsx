@@ -30,12 +30,35 @@ const App: React.FC = () => {
 
   const [workspaces, setWorkspaces] = useState<any[] | null>(null);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
         checkWorkspaces(session.user.id);
+        fetchUnreadCount(session.user.id);
+
+        // Subscribe to new notifications
+        const channel = supabase
+          .channel('notifications_count')
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'notifications',
+              filter: `user_id=eq.${session.user.id}`,
+            },
+            () => {
+              fetchUnreadCount(session.user.id);
+            }
+          )
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
       }
       setAuthLoading(false);
     });
@@ -46,12 +69,26 @@ const App: React.FC = () => {
       setSession(session);
       if (session) {
         checkWorkspaces(session.user.id);
+        fetchUnreadCount(session.user.id);
       } else {
         setWorkspaces(null);
+        setUnreadCount(0);
       }
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchUnreadCount = async (userId: string) => {
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('read', false);
+
+    if (!error && count !== null) {
+      setUnreadCount(count);
+    }
+  };
 
   const checkWorkspaces = async (userId: string) => {
     try {
@@ -166,7 +203,7 @@ const App: React.FC = () => {
         onCreateWorkspace={() => setView('create-workspace')}
         onShowHome={() => setView('home')}
         onShowNotifications={() => setView('notifications')}
-        unreadNotificationsCount={2} // Mock unread count
+        unreadNotificationsCount={unreadCount}
         onShowDonations={() => setView('donations')}
         onShowTransactions={() => setView('transactions')}
         onShowForms={() => setView('forms')}
@@ -230,7 +267,7 @@ const App: React.FC = () => {
           <SettingsScreen />
         )}
         {view === 'notifications' && (
-          <NotificationsScreen />
+          <NotificationsScreen onRefresh={() => session?.user && fetchUnreadCount(session.user.id)} />
         )}
         {view === 'create-workspace' && (
           <OnboardingWizard user={session.user} onComplete={handleOnboardingComplete} />

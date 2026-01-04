@@ -68,17 +68,19 @@ export const workspaceService = {
 
         // Map back to a structure the frontend expects (id, name, etc.)
         // data is { entity_id, role, entities: { ... } }
-        return data.map(d => {
-            // @ts-ignore
-            const entity = d.entities;
-            return {
-                id: entity.id,
-                name: entity.name,
-                created_at: entity.created_at,
-                type: entity.type,
-                role: d.role
-            };
-        });
+        return data
+            .filter(d => d.entities) // Filter out any null entities (e.g. from RLS restriction)
+            .map(d => {
+                // @ts-ignore
+                const entity = d.entities;
+                return {
+                    id: entity.id,
+                    name: entity.name,
+                    created_at: entity.created_at,
+                    type: entity.type,
+                    role: d.role
+                };
+            });
     }
 };
 

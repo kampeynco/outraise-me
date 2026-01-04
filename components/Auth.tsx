@@ -78,7 +78,7 @@ export default function Auth() {
         <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-950 text-white p-4">
             <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-8 shadow-2xl">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold tracking-tight mb-2">Welcome to KAIOS</h1>
+                    <h1 className="text-3xl font-bold tracking-tight mb-2">Welcome to Outraise</h1>
                     <p className="text-neutral-400">Sign in to continue to your workspace</p>
                 </div>
 

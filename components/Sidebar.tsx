@@ -17,7 +17,7 @@ interface SidebarProps {
   unreadNotificationsCount?: number;
 }
 
-type ThemeMode = 'system' | 'light' | 'dark';
+type ThemeMode = 'light' | 'dark';
 
 export const Sidebar: React.FC<SidebarProps> = ({
   user,

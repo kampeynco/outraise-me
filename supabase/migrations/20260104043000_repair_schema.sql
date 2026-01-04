@@ -1,13 +1,3 @@
--- Create Helper Function to avoid RLS recursion
-CREATE OR REPLACE FUNCTION get_user_entity_ids()
-RETURNS SETOF UUID
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT entity_id FROM entity_members WHERE user_id = auth.uid();
-$$;
-
 -- Safe creation of entities
 CREATE TABLE IF NOT EXISTS entities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -42,6 +32,16 @@ CREATE TABLE IF NOT EXISTS forms (
   settings JSONB DEFAULT '{}'::jsonb
 );
 ALTER TABLE forms ENABLE ROW LEVEL SECURITY;
+
+-- Create Helper Function to avoid RLS recursion (NOW SAFE to create, tables exist)
+CREATE OR REPLACE FUNCTION get_user_entity_ids()
+RETURNS SETOF UUID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT entity_id FROM entity_members WHERE user_id = auth.uid();
+$$;
 
 -- RLS Policies for entities
 DROP POLICY IF EXISTS "Users can view joined entities" ON entities;

@@ -13,7 +13,6 @@ import { FormsScreen } from './components/FormsScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { NotificationsScreen } from './components/NotificationsScreen';
 import { FormEditorScreen } from './components/Forms/FormEditorScreen';
-import { FormsScreen } from './components/FormsScreen';
 import { generateResponse } from './services/geminiService';
 import { ChatMessage } from './types';
 import { supabase } from './services/supabaseClient';

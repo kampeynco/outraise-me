@@ -32,12 +32,14 @@ const App: React.FC = () => {
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Mock session for verification
-    const mockSession = { user: { id: 'mock', email: 'demo@example.com', user_metadata: { full_name: 'Demo User' } } };
-    setSession(mockSession as any);
-    setAuthLoading(false);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) {
+        checkWorkspaces(session.user.id);
+      }
+      setAuthLoading(false);
+    });
 
-    /*
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -49,7 +51,6 @@ const App: React.FC = () => {
       }
     });
     return () => subscription.unsubscribe();
-    */
   }, []);
 
   const checkWorkspaces = async (userId: string) => {

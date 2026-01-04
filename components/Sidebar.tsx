@@ -29,12 +29,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onShowForms,
   onShowSettings
 }) => {
-  const [theme, setTheme] = useState<ThemeMode>('system');
+  const [theme, setTheme] = useState<ThemeMode>('light');
 
   useEffect(() => {
     // Check local storage on mount, default to 'system' if not found
     const savedTheme = localStorage.getItem('theme') as ThemeMode | null;
-    if (savedTheme && ['system', 'light', 'dark'].includes(savedTheme)) {
+    if (savedTheme && ['light', 'dark'].includes(savedTheme)) {
       setTheme(savedTheme);
     }
   }, []);
@@ -81,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Top Section: Branding */}
       <div className="h-16 px-6 flex items-center shrink-0">
         <h1 className="text-text-main dark:text-white text-2xl font-bold tracking-wide font-serif">
-          KAIOS
+          Outraise
         </h1>
       </div>
 

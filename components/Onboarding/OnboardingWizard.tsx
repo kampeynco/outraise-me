@@ -26,7 +26,12 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
             setWorkspaceId(ws.id);
             setStep(2);
         } catch (err: any) {
-            setError(err.message);
+            console.error('Error creating workspace:', err);
+            if (err.message && err.message.includes('entities_owner_id_fkey')) {
+                setError('Your session has expired or is invalid. Please sign out and sign in again.');
+            } else {
+                setError(err.message);
+            }
         } finally {
             setLoading(false);
         }

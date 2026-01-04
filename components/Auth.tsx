@@ -9,6 +9,8 @@ export default function Auth() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
 
+    const [checkEmail, setCheckEmail] = useState(false);
+
     const handleEmailAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -16,11 +18,14 @@ export default function Auth() {
 
         try {
             if (isSignUp) {
-                const { error } = await supabase.auth.signUp({
+                const { error, data } = await supabase.auth.signUp({
                     email,
                     password,
                 });
                 if (error) throw error;
+                if (data.user && !data.session) {
+                    setCheckEmail(true);
+                }
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
                     email,
@@ -34,6 +39,29 @@ export default function Auth() {
             setLoading(false);
         }
     };
+
+    if (checkEmail) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-950 text-white p-4">
+                <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-8 shadow-2xl text-center">
+                    <div className="mx-auto w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mb-4">
+                        <Mail className="w-6 h-6 text-indigo-400" />
+                    </div>
+                    <h2 className="text-2xl font-bold mb-2">Check your email</h2>
+                    <p className="text-neutral-400 mb-6">
+                        We've sent a confirmation link to <strong>{email}</strong>.
+                        Please check your inbox to sign in.
+                    </p>
+                    <button
+                        onClick={() => setCheckEmail(false)}
+                        className="text-indigo-400 hover:text-indigo-300 font-medium"
+                    >
+                        Back to Sign In
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     const handleGoogleLogin = async () => {
         try {
